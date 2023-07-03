@@ -9,17 +9,28 @@ slack_token = os.environ["SLACK_BOT_TOKEN"]
 channel = os.environ["CHANNEL"]
 
 client = WebClient(token=slack_token)
+# bot user id to prevent response to bot messages
+bot_user_id = client.auth_test()['user_id']
 
 
-@app.route("/slack/event", methods=["POST", "GET"])
-def event_listener():
+@app.route("/slack/message", methods=["POST", "GET"])
+def handle_message():
 
-    # data = request.json
-    #
-    # if 'challenge' in data:
-    #     return data['challenge'], 200
+    data = request.json
 
-    print(client.chat_postMessage(channel=channel, text="Test 123"))
+    if 'challenge' in data:
+        return data['challenge'], 200
+
+    channel_id = data["event"]["channel"]
+    text = data["event"]["text"]
+    user_id = data["event"]["user"]
+
+    # check if the message is a DM and not from the bot
+    if channel_id.startswith("D") and user_id != bot_user_id:
+        try:
+            client.chat_postMessage(channel=channel_id, text=text)
+        except SlackApiError as e:
+            print(e)
 
     return "", 200
 
